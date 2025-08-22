@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple 360° Image Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="openings-module.js"></script>
+    <!-- OpenCV.js (4.x) – CDN z dokumentacji -->
+    <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+    <link rel="stylesheet" href="simple-360-viewer.css">
+</head>
+<body>
+    <div id="container">
+        <!-- Główny interfejs -->
+        <div id="viewer-container">
+            <canvas id="viewer-canvas"></canvas>
+            
+            <!-- Overlay z informacjami -->
+            <div id="info-overlay">
+                <div id="point-info">Punkty: <span id="point-count">0</span></div>
+                <div id="line-info">Linie: <span id="line-count">0</span></div>
+                <div id="cursor-info">Pozycja: <span id="cursor-position">-</span></div>
+            </div>
+        </div>
+        
+        <!-- Panel sterowania -->
+        <div id="control-panel">
+            <div class="panel-header">
+                <h2>🏠 Simple 360° Viewer</h2>
+                <div class="version">v1.0 - Uproszczona wersja</div>
+            </div>
+            
+            <!-- Ładowanie zdjęć -->
+            <div class="control-section">
+                <h3>📸 Zdjęcia</h3>
+                <div class="image-controls">
+                    <input type="file" id="image-input" accept="image/*" multiple>
+                    <button id="load-images" class="btn primary">Załaduj zdjęcia</button>
+                </div>
+                <div id="image-list" class="image-list">
+                    <!-- Lista załadowanych zdjęć -->
+                </div>
+            </div>
+            
+            <!-- Tryby pracy -->
+            <div class="control-section">
+                <h3>🔧 Tryby pracy</h3>
+                <div class="mode-buttons">
+                    <button id="mode-view" class="mode-btn active">👁️ Podgląd</button>
+                    <button id="mode-point" class="mode-btn">📍 Punkty</button>
+                    <button id="mode-calibrate" class="mode-btn">📏 Kalibruj</button>
+                </div>
+                <div class="mode-buttons">
+                    <button id="mode-door" class="mode-btn opening-mode">🚪 Drzwi</button>
+                    <button id="mode-window" class="mode-btn opening-mode">🪟 Okna</button>
+                    <button id="mode-opening" class="mode-btn opening-mode">⬜ Otwory</button>
+                </div>
+                <div class="mode-description">
+                    <p id="mode-desc">Tryb podglądu - obracaj kamerę, przeciągnij punkty aby je edytować</p>
+                </div>
+                
+                <!-- Panel kalibracji -->
+                <div id="calibration-panel" class="calibration-panel" style="display: none;">
+                    <h4>📏 Kalibracja</h4>
+                    <div class="calibration-controls">
+                        <label>
+                            Rzeczywista długość:
+                            <input type="number" id="calibration-value" value="80" min="1" max="1000" step="1">
+                            <span>cm</span>
+                        </label>
+                        <div class="calibration-status">
+                            <span id="calibration-status-text">Dodaj 2 punkty na obiekcie o znanej długości</span>
+                        </div>
+                        <div class="calibration-buttons">
+                            <button id="calibration-done" class="btn success" disabled>✅ Gotowe</button>
+                            <button id="calibration-cancel" class="btn warning">❌ Anuluj</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Akcje -->
+            <div class="control-section">
+                <h3>⚡ Akcje</h3>
+                <div class="action-buttons">
+                    <button id="clear-points" class="btn warning">Wyczyść punkty</button>
+                    <button id="clear-lines" class="btn warning">Wyczyść linie</button>
+                    <button id="copy-surface" class="btn info">Kopiuj powierzchnię na dół</button>
+                    <button id="export-data" class="btn success">Eksportuj dane</button>
+                    <button id="generate-room-plan" class="btn success">Eksportuj rzut</button>
+                    <button id="auto-detect-room" class="btn success">Eksportuj rzut auto (OpenCV)</button>
+                </div>
+            </div>
+            
+            <!-- Otwory -->
+            <div class="control-section">
+                <h3>🚪 Otwory</h3>
+                <div class="openings-info">
+                    <div>Otwory: <span id="openings-count">0</span></div>
+                </div>
+                <div class="openings-controls">
+                    <button id="cancel-opening" class="btn warning">Anuluj otwór</button>
+                    <button id="clear-openings" class="btn warning">Wyczyść otwory</button>
+                </div>
+                <div id="openings-list" class="openings-list">
+                    <!-- Lista otworów -->
+                </div>
+            </div>
+            
+            <!-- Ustawienia -->
+            <div class="control-section">
+                <h3>⚙️ Ustawienia</h3>
+                <div class="settings">
+                    <label>
+                        <input type="checkbox" id="show-helpers" checked>
+                        Pokaż pomocniki
+                    </label>
+                    <label>
+                        Rozmiar punktów:
+                        <input type="range" id="point-size" min="1" max="8" step="0.5" value="3">
+                        <span id="point-size-value">3.0</span>
+                    </label>
+                    <label>
+                        Grubość linii:
+                        <input type="range" id="line-width" min="1" max="5" step="0.5" value="2">
+                        <span id="line-width-value">2.0</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Informacje -->
+            <div class="control-section">
+                <h3>ℹ️ Instrukcje</h3>
+                <div class="instructions">
+                    <ul id="instructions-list">
+                        <li>Załaduj zdjęcia 360° (equirectangular)</li>
+                        <li>Tryb Punkty: kliknij aby dodać punkt</li>
+                        <li>Punkty łączą się automatycznie</li>
+                        <li>Zamknij bryłę klikając blisko pierwszego punktu</li>
+                        <li>Kopiuj powierzchnię na dół (np. dla podłogi)</li>
+                        <li>Tryby Otworów: kliknij 2 punkty aby oznaczyć drzwi/okna</li>
+                        <li>Przeciągnij punkty aby je edytować</li>
+                        <li>Przeciągnij tło aby obracać kamerę</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Komunikaty -->
+    <div id="messages"></div>
+    
+    <script src="simple-360-viewer.js"></script>
+</body>
+</html>

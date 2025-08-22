@@ -1,0 +1,578 @@
+/* Simple 360° Image Viewer - Uproszczona wersja */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a1a;
+    color: #ffffff;
+    overflow: hidden;
+}
+
+#container {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Główny obszar wyświetlania */
+#viewer-container {
+    flex: 1;
+    position: relative;
+    background: #000;
+}
+
+#viewer-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+}
+
+#viewer-canvas.grab {
+    cursor: grab;
+}
+
+#viewer-canvas.grabbing {
+    cursor: grabbing;
+}
+
+#viewer-canvas.crosshair {
+    cursor: crosshair;
+}
+
+/* Overlay z informacjami */
+#info-overlay {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px;
+    border-radius: 8px;
+    backdrop-filter: blur(5px);
+    min-width: 200px;
+}
+
+#info-overlay > div {
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+#info-overlay > div:last-child {
+    margin-bottom: 0;
+}
+
+/* Panel sterowania */
+#control-panel {
+    width: 350px;
+    background: #2a2a2a;
+    border-left: 1px solid #444;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.panel-header {
+    padding: 20px;
+    background: #333;
+    border-bottom: 1px solid #444;
+}
+
+.panel-header h2 {
+    margin-bottom: 5px;
+    color: #4CAF50;
+}
+
+.version {
+    font-size: 12px;
+    color: #888;
+}
+
+.control-section {
+    padding: 20px;
+    border-bottom: 1px solid #444;
+}
+
+.control-section h3 {
+    margin-bottom: 15px;
+    color: #fff;
+    font-size: 16px;
+}
+
+/* Kontrolki ładowania zdjęć */
+.image-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+#image-input {
+    flex: 1;
+    padding: 8px;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+}
+
+#image-input:focus {
+    outline: none;
+    border-color: #4CAF50;
+}
+
+.image-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.image-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background: #333;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.image-item:hover {
+    background: #3a3a3a;
+}
+
+.image-item.active {
+    background: #4CAF50;
+}
+
+.image-item .image-name {
+    flex: 1;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.image-item .image-index {
+    font-size: 11px;
+    color: #888;
+    margin-right: 8px;
+}
+
+/* Przyciski trybów */
+.mode-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.mode-btn {
+    flex: 1;
+    padding: 10px 8px;
+    background: #444;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mode-btn:hover {
+    background: #555;
+}
+
+.mode-btn.active {
+    background: #4CAF50;
+    border-color: #4CAF50;
+}
+
+.mode-description {
+    font-size: 12px;
+    color: #ccc;
+    line-height: 1.4;
+}
+
+/* Przyciski akcji */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.btn.primary {
+    background: #4CAF50;
+    color: white;
+}
+
+.btn.primary:hover {
+    background: #45a049;
+}
+
+.btn.warning {
+    background: #FF9800;
+    color: white;
+}
+
+.btn.warning:hover {
+    background: #f57c00;
+}
+
+.btn.success {
+    background: #2196F3;
+    color: white;
+}
+
+.btn.success:hover {
+    background: #1976D2;
+}
+
+/* Ustawienia */
+.settings {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.settings label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.settings input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+}
+
+.settings input[type="range"] {
+    flex: 1;
+    margin: 0 8px;
+}
+
+.settings span {
+    min-width: 30px;
+    text-align: center;
+    font-size: 11px;
+    color: #4CAF50;
+}
+
+/* Instrukcje */
+.instructions ul {
+    list-style: none;
+    padding: 0;
+}
+
+.instructions li {
+    padding: 5px 0;
+    font-size: 12px;
+    color: #ccc;
+    line-height: 1.4;
+}
+
+.instructions li:before {
+    content: "• ";
+    color: #4CAF50;
+    margin-right: 5px;
+}
+
+/* Komunikaty */
+#messages {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    max-width: 350px;
+}
+
+.message {
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+}
+
+.message.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.message.info {
+    background: #2196F3;
+    color: white;
+}
+
+.message.success {
+    background: #4CAF50;
+    color: white;
+}
+
+.message.warning {
+    background: #FF9800;
+    color: white;
+}
+
+.message.error {
+    background: #F44336;
+    color: white;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Panel kalibracji */
+.calibration-panel {
+    background: rgba(255, 107, 0, 0.1);
+    border: 2px solid #FF6B00;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 10px;
+}
+
+.calibration-panel h4 {
+    margin: 0 0 10px 0;
+    color: #FF6B00;
+    font-size: 14px;
+}
+
+.calibration-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.calibration-controls label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.calibration-controls input[type="number"] {
+    width: 80px;
+    padding: 4px 8px;
+    border: 1px solid #666;
+    border-radius: 4px;
+    background: #333;
+    color: white;
+    font-size: 12px;
+}
+
+.calibration-status {
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    text-align: center;
+    font-size: 11px;
+    color: #ccc;
+}
+
+.calibration-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.calibration-buttons button {
+    flex: 1;
+    padding: 8px;
+    font-size: 11px;
+}
+
+/* Otwory - nowe style */
+.opening-mode {
+    background: linear-gradient(135deg, #8B4513, #A0522D) !important;
+}
+
+.opening-mode.active {
+    background: linear-gradient(135deg, #A0522D, #CD853F) !important;
+    box-shadow: 0 0 10px rgba(160, 82, 45, 0.5);
+}
+
+.openings-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 14px;
+    color: #cccccc;
+}
+
+.openings-controls {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.openings-controls .btn {
+    flex: 1;
+    font-size: 12px;
+    padding: 6px 8px;
+}
+
+.openings-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #2a2a2a;
+}
+
+.opening-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #444;
+    font-size: 12px;
+}
+
+.opening-item:last-child {
+    border-bottom: none;
+}
+
+.opening-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.opening-type {
+    font-weight: bold;
+}
+
+.opening-type.door {
+    color: #8B4513;
+}
+
+.opening-type.window {
+    color: #4169E1;
+}
+
+.opening-type.other {
+    color: #FFD700;
+}
+
+.opening-dimensions {
+    color: #888;
+    font-size: 11px;
+}
+
+.btn-remove {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove:hover {
+    background: #c82333;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    #container {
+        flex-direction: column;
+    }
+    
+    #control-panel {
+        width: 100%;
+        height: 300px;
+        order: 2;
+    }
+    
+    #viewer-container {
+        order: 1;
+        height: calc(100vh - 300px);
+    }
+    
+    .mode-buttons {
+        flex-wrap: wrap;
+    }
+    
+    .mode-btn {
+        flex: 1 1 calc(50% - 4px);
+    }
+}
+
+/* Animacje */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.control-section {
+    animation: slideIn 0.3s ease;
+}
+
+/* Stany loading */
+.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading::before {
+    content: 'Ładowanie...';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 14px;
+    z-index: 1;
+}
